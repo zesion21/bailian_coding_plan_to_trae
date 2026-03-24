@@ -8,12 +8,9 @@
 
 ## 支持的 AI 服务
 
-| 端口 | 服务商 | 代理目标 | 可用模型 |
-|------|--------|----------|----------|
+| 端口    | 服务商           | 代理目标                      | 可用模型                                                                                             |
+| ------- | ---------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **443** | 百炼 Coding Plan | coding.dashscope.aliyuncs.com | qwen3.5-plus, qwen3-max, qwen3-coder-next, qwen3-coder-plus, MiniMax-M2.5, glm-5, glm-4.7, kimi-k2.5 |
-| **8443** | 百炼普通 API | dashscope.aliyuncs.com | qwen3-max-2026-01-23, qwen3-coder-plus |
-| **8444** | 智谱 AI | open.bigmodel.cn | glm-4.7 |
-| **8445** | 月之暗面 | api.moonshot.cn | kimi-k2.5 |
 
 ## 目录结构
 
@@ -28,6 +25,7 @@ nginx-ai-proxy/
 ├── logs/                    # 日志目录
 │   ├── access.log           # 访问日志
 │   └── error.log            # 错误日志
+├── temp/                    # 临时文件
 ├── nginx.exe                # Nginx 可执行文件
 └── killnginx.bat            # 停止 Nginx 脚本
 ```
@@ -41,6 +39,8 @@ nginx-ai-proxy/
 ```
 127.0.0.1 api.openai.com
 ```
+
+记得更新DNS `ipconfig /flushdns`
 
 ### 2. 安装并信任 SSL 证书
 
@@ -56,6 +56,10 @@ nginx-ai-proxy/
 ```bash
 ./nginx.exe
 ```
+
+或者使用命令行 `start nginx`
+
+检查配置文件，解决启动失败的问题 `nginx -t`
 
 ### 4. 停止 Nginx
 
@@ -75,17 +79,17 @@ nginx -s stop
 
 ### nginx.conf 关键配置
 
-| 配置项 | 值 | 说明 |
-|--------|-----|------|
-| `worker_processes` | 10 | 工作进程数 |
-| `worker_connections` | 1024 | 每个进程的最大连接数 |
-| `proxy_buffering` | off | 关闭缓冲，支持流式响应 |
+| 配置项               | 值    | 说明                         |
+| -------------------- | ----- | ---------------------------- |
+| `worker_processes`   | 10    | 工作进程数                   |
+| `worker_connections` | 1024  | 每个进程的最大连接数         |
+| `proxy_buffering`    | off   | 关闭缓冲，支持流式响应       |
 | `proxy_read_timeout` | 3600s | 超时时间，适应长时间 AI 响应 |
-| `proxy_ssl_verify` | off | 关闭 SSL 验证 |
+| `proxy_ssl_verify`   | off   | 关闭 SSL 验证                |
 
 ## 在 Trae 中使用
 
-### 百炼 Coding Plan (端口 443)
+### 百炼 Coding Plan
 
 ```json
 {
@@ -119,40 +123,13 @@ nginx -s stop
 }
 ```
 
-### 百炼普通 API (端口 8443)
-
-```json
-{
-  "baseUrl": "https://api.openai.com:8443/v1",
-  "apiKey": "你的百炼API Key"
-}
-```
-
-### 智谱 AI (端口 8444)
-
-```json
-{
-  "baseUrl": "https://api.openai.com:8444/v1",
-  "apiKey": "你的智谱API Key"
-}
-```
-
-### 月之暗面 (端口 8445)
-
-```json
-{
-  "baseUrl": "https://api.openai.com:8445/v1",
-  "apiKey": "你的月之暗面API Key"
-}
-```
-
 ## 注意事项
 
 1. **证书信任**：必须将 CA 证书安装到"受信任的根证书颁发机构"，否则 HTTPS 请求会失败。
 
 2. **hosts 配置**：确保 hosts 文件配置正确，否则请求不会经过本地代理。
 
-3. **端口占用**：确保 443、8443、8444、8445 端口没有被其他程序占用。
+3. **端口占用**：确保 443 端口没有被其他程序占用。
 
 4. **日志查看**：如遇问题，请查看 `logs/error.log` 获取详细错误信息。
 
@@ -165,6 +142,7 @@ nginx -s stop
 ### Q: 启动后无法访问？
 
 检查：
+
 - hosts 文件是否正确配置
 - 证书是否已信任
 - 对应端口是否被占用
@@ -181,17 +159,14 @@ nginx -s stop
 
 ```powershell
 curl -k https://api.openai.com/v1/models
-curl -k https://api.openai.com:8443/v1/models
-curl -k https://api.openai.com:8444/v1/models
-curl -k https://api.openai.com:8445/v1/models
 ```
 
 ## 模型推荐
 
-| 用途 | 推荐模型 | 端口 | 原因 |
-|------|---------|------|------|
-| 日常对话 | qwen3.5-plus | 443 | 1M上下文，支持图像 |
-| 代码生成 | qwen3-coder-plus | 443/8443 | 1M上下文，专为代码优化 |
-| 复杂推理 | qwen3-max-2026-01-23 | 443/8443 | 最新最强模型 |
-| 国产替代 | glm-4.7 | 443/8444 | 智谱最新模型 |
-| 长文本 | kimi-k2.5 | 443/8445 | 月之暗面擅长长文本 |
+| 用途     | 推荐模型             | 端口     | 原因                   |
+| -------- | -------------------- | -------- | ---------------------- |
+| 日常对话 | qwen3.5-plus         | 443      | 1M上下文，支持图像     |
+| 代码生成 | qwen3-coder-plus     | 443/8443 | 1M上下文，专为代码优化 |
+| 复杂推理 | qwen3-max-2026-01-23 | 443/8443 | 最新最强模型           |
+| 国产替代 | glm-5                | 443/8444 | 智谱最新模型           |
+| 长文本   | kimi-k2.5            | 443/8445 | 月之暗面擅长长文本     |
